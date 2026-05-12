@@ -1,0 +1,466 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kugelvolumen und Wahrscheinlichkeiten - Wiederholung</title>
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-12: 3rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --radius-full: 9999px;
+      --color-bg: #f7f6f2;
+      --color-surface: #ffffff;
+      --color-text: #28251d;
+      --color-text-muted: #6f6b63;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-red: #d94a57;
+      --color-white: #f7f7f5;
+      --color-white-shadow: #d9d8d2;
+      --shadow-md: 0 10px 30px rgba(40, 37, 29, 0.12);
+      --font-body: 'Satoshi', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      color: var(--color-text);
+      background: radial-gradient(circle at top, rgba(1,105,111,0.1), transparent 35%), var(--color-bg);
+      display: grid;
+      place-items: center;
+      padding: var(--space-6);
+    }
+
+    .app {
+      width: min(100%, 900px);
+      background: var(--color-surface);
+      border: 1px solid rgba(40, 37, 29, 0.12);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      padding: clamp(var(--space-6), 4vw, var(--space-12));
+      display: grid;
+      gap: var(--space-8);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: var(--text-xl);
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0;
+      color: var(--color-text-muted);
+      max-width: 64ch;
+    }
+
+    .machine-wrap {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: var(--space-8);
+      align-items: center;
+    }
+
+    .machine {
+      position: relative;
+      background: linear-gradient(180deg, #d7eef0 0%, #c0e4e7 100%);
+      border: 6px solid #7f8b91;
+      border-radius: 2rem 2rem 1.25rem 1.25rem;
+      min-height: 520px;
+      overflow: hidden;
+    }
+
+    .glass {
+      position: absolute;
+      inset: 1.1rem 1.1rem 7rem;
+      border-radius: 1.25rem;
+      background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.36));
+      border: 3px solid rgba(255,255,255,0.55);
+      overflow: hidden;
+    }
+
+    .balls {
+      position: absolute;
+      inset: 0;
+    }
+
+    .ball {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      transition:
+        left 680ms cubic-bezier(0.22, 1, 0.36, 1),
+        top 680ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 680ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 220ms ease;
+    }
+
+    .ball.red {
+      background: radial-gradient(circle at 30% 28%, #ffb2bb, var(--color-red) 65%);
+      box-shadow: inset -8px -10px 16px rgba(0,0,0,0.12), inset 8px 8px 14px rgba(255,255,255,0.35);
+    }
+
+    .ball.white {
+      background: radial-gradient(circle at 30% 28%, #ffffff, var(--color-white) 68%);
+      border: 1px solid rgba(40, 37, 29, 0.12);
+      box-shadow: inset -8px -10px 16px rgba(180, 178, 170, 0.22), inset 8px 8px 14px rgba(255,255,255,0.95), 0 1px 2px rgba(40, 37, 29, 0.08);
+    }
+
+    .ball.removing {
+      opacity: 0;
+      transform: translateY(120px) scale(0.8);
+    }
+
+    .ball.jitter {
+      transform: scale(0.98);
+    }
+
+    .shute {
+      position: absolute;
+      left: 50%;
+      bottom: 3.5rem;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 70px;
+      border-radius: 0.75rem 0.75rem 1.5rem 1.5rem;
+      background: #4b5458;
+      border: 4px solid #2f3538;
+    }
+
+    .tray {
+      position: absolute;
+      left: 50%;
+      bottom: 1rem;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 56px;
+      border-radius: 0 0 1.25rem 1.25rem;
+      background: #8a959b;
+      border: 4px solid #5f686d;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .dispensed-ball {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      opacity: 0;
+      transform: translateY(-24px) scale(0.8);
+      transition: transform 300ms ease, opacity 300ms ease;
+    }
+
+    .dispensed-ball.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .dispensed-ball.red {
+      background: radial-gradient(circle at 30% 28%, #ffb2bb, var(--color-red) 65%);
+      box-shadow: inset -6px -8px 12px rgba(0,0,0,0.12), inset 6px 6px 10px rgba(255,255,255,0.3);
+    }
+
+    .dispensed-ball.white {
+      background: radial-gradient(circle at 30% 28%, #ffffff, var(--color-white) 68%);
+      border: 1px solid rgba(40, 37, 29, 0.12);
+      box-shadow: inset -6px -8px 12px rgba(180, 178, 170, 0.22), inset 6px 6px 10px rgba(255,255,255,0.95);
+    }
+
+    .panel {
+      display: grid;
+      gap: var(--space-6);
+      align-content: start;
+    }
+
+    .status-card, .info-card {
+      background: #fbfbf9;
+      border: 1px solid rgba(40, 37, 29, 0.12);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+    }
+
+    .counts {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .count-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      font-weight: 600;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+    }
+
+    .dot.red { background: var(--color-red); }
+    .dot.white {
+      background: linear-gradient(180deg, #ffffff, var(--color-white));
+      border: 1px solid rgba(40, 37, 29, 0.16);
+    }
+
+    .button {
+      min-height: 52px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--color-primary);
+      color: white;
+      font-weight: 700;
+      font-size: var(--text-sm);
+      padding: 0 var(--space-6);
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+    }
+
+    .button:hover { background: var(--color-primary-hover); }
+    .button:active { transform: translateY(1px) scale(0.99); }
+    .button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .result {
+      min-height: 3.5rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .empty { color: var(--color-text-muted); }
+
+    @media (max-width: 760px) {
+      .machine-wrap { grid-template-columns: 1fr; }
+      .machine { min-height: 470px; }
+      .ball { width: 48px; height: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section>
+      <h1>Kugelvolumen und Wahrscheinlichkeiten - Wiederholung</h1>
+      <p>Liebe 9b, diese App hilft euch bei der Wiederholungsaufgabe vom 13.05.26.</p>
+    </section>
+
+    <section class="machine-wrap">
+      <div class="machine" aria-label="Grafik eines Kaugummiautomaten">
+        <div class="glass" id="glass">
+          <div class="balls" id="balls"></div>
+        </div>
+        <div class="shute" aria-hidden="true"></div>
+        <div class="tray" aria-label="Ausgabefach">
+          <div class="dispensed-ball" id="dispensedBall"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="status-card">
+          <div class="counts">
+            <div class="count-row">
+              <span class="label"><span class="dot red"></span>Rot</span>
+              <span id="redCount">8</span>
+            </div>
+            <div class="count-row">
+              <span class="label"><span class="dot white"></span>Weiß</span>
+              <span id="whiteCount">12</span>
+            </div>
+            <div class="count-row">
+              <span>Insgesamt</span>
+              <span id="totalCount">20</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="button" id="drawButton">Kugel ziehen</button>
+
+        <div class="info-card">
+          <div class="result empty" id="result">Noch wurde keine Kugel gezogen.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const ballsData = [
+      ...Array.from({ length: 8 }, (_, index) => ({ id: `r${index}`, color: 'red' })),
+      ...Array.from({ length: 12 }, (_, index) => ({ id: `w${index}`, color: 'white' }))
+    ];
+
+    const ballsContainer = document.getElementById('balls');
+    const glass = document.getElementById('glass');
+    const redCount = document.getElementById('redCount');
+    const whiteCount = document.getElementById('whiteCount');
+    const totalCount = document.getElementById('totalCount');
+    const result = document.getElementById('result');
+    const button = document.getElementById('drawButton');
+    const dispensedBall = document.getElementById('dispensedBall');
+    const ballMap = new Map();
+
+    function shuffle(array) {
+      const clone = [...array];
+      for (let i = clone.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [clone[i], clone[j]] = [clone[j], clone[i]];
+      }
+      return clone;
+    }
+
+    function getVisiblePositions(count) {
+      const width = glass.clientWidth;
+      const height = glass.clientHeight;
+      const ballSize = window.innerWidth <= 760 ? 48 : 54;
+      const cols = count <= 6 ? 3 : count <= 12 ? 4 : 5;
+      const rows = Math.ceil(count / cols);
+      const usableWidth = width - ballSize - 24;
+      const usableHeight = height - ballSize - 24;
+      const colGap = cols > 1 ? usableWidth / (cols - 1) : 0;
+      const rowGap = rows > 1 ? usableHeight / (rows - 1) : 0;
+      const positions = [];
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let col = 0; col < cols; col += 1) {
+          if (positions.length >= count) break;
+          const baseLeft = 12 + col * colGap;
+          const baseTop = 12 + row * rowGap;
+          const jitterX = (Math.random() - 0.5) * 10;
+          const jitterY = (Math.random() - 0.5) * 10;
+          const left = Math.max(8, Math.min(width - ballSize - 8, baseLeft + jitterX));
+          const top = Math.max(8, Math.min(height - ballSize - 8, baseTop + jitterY));
+          positions.push({ left, top });
+        }
+      }
+
+      return shuffle(positions);
+    }
+
+    function updateCounts() {
+      const red = ballsData.filter(ball => ball.color === 'red').length;
+      const white = ballsData.filter(ball => ball.color === 'white').length;
+      redCount.textContent = red;
+      whiteCount.textContent = white;
+      totalCount.textContent = ballsData.length;
+      button.disabled = ballsData.length === 0;
+    }
+
+    function layoutBalls(animated = true) {
+      const order = shuffle(ballsData);
+      const positions = getVisiblePositions(order.length);
+
+      order.forEach((ball, index) => {
+        const element = ballMap.get(ball.id);
+        if (!element) return;
+        if (!animated) {
+          element.style.transition = 'none';
+        } else {
+          element.style.transition = '';
+        }
+        element.style.left = `${positions[index].left}px`;
+        element.style.top = `${positions[index].top}px`;
+      });
+
+      if (!animated) {
+        requestAnimationFrame(() => {
+          ballMap.forEach(element => {
+            element.style.transition = '';
+          });
+        });
+      }
+    }
+
+    function createBalls() {
+      ballsData.forEach(ball => {
+        const element = document.createElement('div');
+        element.className = `ball ${ball.color}`;
+        ballsContainer.appendChild(element);
+        ballMap.set(ball.id, element);
+      });
+      layoutBalls(false);
+      updateCounts();
+    }
+
+    function showDispensed(color) {
+      dispensedBall.className = `dispensed-ball ${color}`;
+      requestAnimationFrame(() => {
+        dispensedBall.classList.add('show');
+      });
+    }
+
+    button.addEventListener('click', () => {
+      if (ballsData.length === 0) {
+        result.textContent = 'Der Automat ist leer.';
+        result.classList.remove('empty');
+        return;
+      }
+
+      button.disabled = true;
+      const randomIndex = Math.floor(Math.random() * ballsData.length);
+      const drawnBall = ballsData[randomIndex];
+      const removedElement = ballMap.get(drawnBall.id);
+      removedElement.classList.add('removing');
+
+      window.setTimeout(() => {
+        ballsData.splice(randomIndex, 1);
+        removedElement.remove();
+        ballMap.delete(drawnBall.id);
+
+        ballMap.forEach(element => {
+          element.classList.add('jitter');
+        });
+        layoutBalls(true);
+
+        window.setTimeout(() => {
+          ballMap.forEach(element => element.classList.remove('jitter'));
+        }, 260);
+
+        updateCounts();
+
+        dispensedBall.className = 'dispensed-ball';
+        void dispensedBall.offsetWidth;
+        showDispensed(drawnBall.color);
+
+        result.textContent = drawnBall.color === 'red'
+          ? 'Es ist eine rote Kugel herausgefallen.'
+          : 'Es ist eine weiße Kugel herausgefallen.';
+        result.classList.remove('empty');
+
+        if (ballsData.length === 0) {
+          result.textContent += ' Jetzt ist der Automat leer.';
+        }
+
+        button.disabled = ballsData.length === 0;
+      }, 180);
+    });
+
+    window.addEventListener('resize', () => {
+      layoutBalls(false);
+    });
+
+    createBalls();
+  </script>
+</body>
+</html>
